@@ -3,8 +3,8 @@
 #include <vector>
 #include <sstream>
 #include <string>
-#include "KittyMemory/KittyScanner.h"
-#include "KittyMemory/KittyMemory.h"
+#include "KittyMemory/KittyMemory.hpp"
+#include "KittyMemory/KittyScanner.hpp"
 
 #define LOG_TAG "NativeMem"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -38,10 +38,6 @@ JNIEXPORT jboolean JNICALL
 Java_memory_example_com_MainActivity_nativeWrite(JNIEnv* env, jobject thiz, jlong address, jint value) {
     uintptr_t addr = (uintptr_t)address;
     if (addr == 0) return JNI_FALSE;
-    if (!KittyMemory::isAddressValid((void*)addr)) {
-        LOGI("write invalid address %p", (void*)addr);
-        return JNI_FALSE;
-    }
     KittyMemory::memWrite((void*)addr, &value, sizeof(int));
     return JNI_TRUE;
 }
@@ -67,7 +63,7 @@ Java_memory_example_com_MainActivity_nativeBatchWrite(JNIEnv* env, jobject thiz,
     size_t limit = (values.size() < g_last_scan_results.size()) ? values.size() : g_last_scan_results.size();
     for (size_t i = 0; i < limit; ++i) {
         uintptr_t addr = g_last_scan_results[i];
-        if (KittyMemory::isAddressValid((void*)addr)) {
+        if (addr != 0) {
             KittyMemory::memWrite((void*)addr, &values[i], sizeof(int));
             count++;
         }
