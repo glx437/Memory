@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <cstdlib>
 #include "KittyMemory/KittyMemory.hpp"
 #include "KittyMemory/KittyScanner.hpp"
 
@@ -16,7 +17,12 @@ extern "C" {
 JNIEXPORT jlongArray JNICALL
 Java_memory_example_com_MainActivity_nativeScan(JNIEnv* env, jobject thiz, jint target_value) {
     g_last_scan_results.clear();
-    KittyScanner::findDataAll(&target_value, sizeof(target_value), g_last_scan_results);
+    auto maps = KittyMemory::getAllMaps();
+    for (const auto& map : maps) {
+        if (!map.isValid() || !map.readable) continue;
+        auto results = KittyScanner::findDataAll(map.startAddress, map.endAddress, &target_value, sizeof(target_value));
+        g_last_scan_results.insert(g_last_scan_results.end(), results.begin(), results.end());
+    }
     jlongArray ret = env->NewLongArray((jsize)g_last_scan_results.size());
     if (ret == nullptr) return nullptr;
     if (!g_last_scan_results.empty()) {
@@ -30,7 +36,7 @@ Java_memory_example_com_MainActivity_nativeRead(JNIEnv* env, jobject thiz, jlong
     uintptr_t addr = (uintptr_t)address;
     if (addr == 0) return -1;
     int value = 0;
-    KittyMemory::memRead(&value, (void*)addr, sizeof(int));
+    if (!KittyMemory::memRead(addr, &value, sizeof(int))) return -1;
     return value;
 }
 
@@ -38,8 +44,8 @@ JNIEXPORT jboolean JNICALL
 Java_memory_example_com_MainActivity_nativeWrite(JNIEnv* env, jobject thiz, jlong address, jint value) {
     uintptr_t addr = (uintptr_t)address;
     if (addr == 0) return JNI_FALSE;
-    KittyMemory::memWrite((void*)addr, &value, sizeof(int));
-    return JNI_TRUE;
+    bool ok = KittyMemory::memWrite(addr, &value, sizeof(int));
+    return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jint JNICALL
@@ -53,18 +59,15 @@ Java_memory_example_com_MainActivity_nativeBatchWrite(JNIEnv* env, jobject thiz,
     std::stringstream ss(input);
     std::string token;
     while (std::getline(ss, token, ',')) {
-        try {
-            values.push_back(std::stoi(token));
-        } catch (...) {
-            LOGI("batch write: invalid token %s", token.c_str());
-        }
+        if (token.empty()) continue;
+        int v = (int)strtol(token.c_str(), nullptr, 10);
+        values.push_back(v);
     }
     int count = 0;
     size_t limit = (values.size() < g_last_scan_results.size()) ? values.size() : g_last_scan_results.size();
     for (size_t i = 0; i < limit; ++i) {
         uintptr_t addr = g_last_scan_results[i];
-        if (addr != 0) {
-            KittyMemory::memWrite((void*)addr, &values[i], sizeof(int));
+        if (addr != 0 && KittyMemory::memWrite(addr, &values[i], sizeof(int))) {
             count++;
         }
     }
