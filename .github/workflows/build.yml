@@ -7,14 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: android-actions/setup-android@v3
-      - name: Install NDK
-        run: sdkmanager "ndk;27.3.13750724"
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27d
       - name: Build with ndk-build
         run: |
-          export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724
           cd jni
-          $ANDROID_NDK_HOME/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk
+          ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk NDK_APPLICATION_MK=Application.mk
       - uses: actions/upload-artifact@v4
         with:
           name: native-libs
