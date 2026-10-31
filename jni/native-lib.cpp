@@ -15,11 +15,18 @@ static std::vector<uintptr_t> g_last_scan_results;
 extern "C" {
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_NativeBridge_nativeScan(JNIEnv* env, jclass clazz, jint target_value) {
+Java_memory_example_com_NativeBridge_nativeScan(JNIEnv* env, jclass clazz, jint target_value, jint permMask) {
 g_last_scan_results.clear();
+KittyScanner::setPatternScanSafeMode(true);
 auto maps = KittyMemory::getAllMaps();
 for (const auto& map : maps) {
 if (!map.isValid() || !map.readable) continue;
+bool allowed = false;
+if ((permMask & 1) && map.writeable && !map.executable) allowed = true;
+if ((permMask & 2) && !map.writeable && !map.executable) allowed = true;
+if ((permMask & 4) && map.executable) allowed = true;
+if ((permMask & 8) && map.readable && !map.writeable && !map.executable) allowed = true;
+if (!allowed) continue;
 auto results = KittyScanner::findDataAll(map.startAddress, map.endAddress, &target_value, sizeof(target_value));
 g_last_scan_results.insert(g_last_scan_results.end(), results.begin(), results.end());
 }
@@ -72,6 +79,37 @@ count++;
 }
 }
 return count;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_memory_example_com_NativeBridge_nativeIsWritable(JNIEnv* env, jclass clazz, jlong address) {
+uintptr_t addr = (uintptr_t)address;
+if (addr == 0) return JNI_FALSE;
+auto map = KittyMemory::getAddressMap(addr);
+if (!map.isValid()) return JNI_FALSE;
+return map.writeable ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jintArray JNICALL
+Java_memory_example_com_NativeBridge_nativeReadBatch(JNIEnv* env, jclass clazz, jlongArray addresses) {
+jsize len = env->GetArrayLength(addresses);
+jlong* addrs = env->GetLongArrayElements(addresses, nullptr);
+jintArray ret = env->NewIntArray(len);
+if (ret == nullptr) {
+env->ReleaseLongArrayElements(addresses, addrs, JNI_ABORT);
+return nullptr;
+}
+jint* vals = env->GetIntArrayElements(ret, nullptr);
+for (jsize i = 0; i < len; i++) {
+int value = -1;
+if (addrs[i] != 0) {
+KittyMemory::memRead((uintptr_t)addrs[i], &value, sizeof(int));
+}
+vals[i] = value;
+}
+env->ReleaseIntArrayElements(ret, vals, 0);
+env->ReleaseLongArrayElements(addresses, addrs, JNI_ABORT);
+return ret;
 }
 
 }
