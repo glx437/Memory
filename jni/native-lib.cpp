@@ -15,63 +15,63 @@ static std::vector<uintptr_t> g_last_scan_results;
 extern "C" {
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_MainActivity_nativeScan(JNIEnv* env, jobject thiz, jint target_value) {
-    g_last_scan_results.clear();
-    auto maps = KittyMemory::getAllMaps();
-    for (const auto& map : maps) {
-        if (!map.isValid() || !map.readable) continue;
-        auto results = KittyScanner::findDataAll(map.startAddress, map.endAddress, &target_value, sizeof(target_value));
-        g_last_scan_results.insert(g_last_scan_results.end(), results.begin(), results.end());
-    }
-    jlongArray ret = env->NewLongArray((jsize)g_last_scan_results.size());
-    if (ret == nullptr) return nullptr;
-    if (!g_last_scan_results.empty()) {
-        env->SetLongArrayRegion(ret, 0, (jsize)g_last_scan_results.size(), (const jlong*)g_last_scan_results.data());
-    }
-    return ret;
+Java_memory_example_com_NativeBridge_nativeScan(JNIEnv* env, jclass clazz, jint target_value) {
+g_last_scan_results.clear();
+auto maps = KittyMemory::getAllMaps();
+for (const auto& map : maps) {
+if (!map.isValid() || !map.readable) continue;
+auto results = KittyScanner::findDataAll(map.startAddress, map.endAddress, &target_value, sizeof(target_value));
+g_last_scan_results.insert(g_last_scan_results.end(), results.begin(), results.end());
+}
+jlongArray ret = env->NewLongArray((jsize)g_last_scan_results.size());
+if (ret == nullptr) return nullptr;
+if (!g_last_scan_results.empty()) {
+env->SetLongArrayRegion(ret, 0, (jsize)g_last_scan_results.size(), (const jlong*)g_last_scan_results.data());
+}
+return ret;
 }
 
 JNIEXPORT jint JNICALL
-Java_memory_example_com_MainActivity_nativeRead(JNIEnv* env, jobject thiz, jlong address) {
-    uintptr_t addr = (uintptr_t)address;
-    if (addr == 0) return -1;
-    int value = 0;
-    if (!KittyMemory::memRead(addr, &value, sizeof(int))) return -1;
-    return value;
+Java_memory_example_com_NativeBridge_nativeRead(JNIEnv* env, jclass clazz, jlong address) {
+uintptr_t addr = (uintptr_t)address;
+if (addr == 0) return -1;
+int value = 0;
+if (!KittyMemory::memRead(addr, &value, sizeof(int))) return -1;
+return value;
 }
 
 JNIEXPORT jboolean JNICALL
-Java_memory_example_com_MainActivity_nativeWrite(JNIEnv* env, jobject thiz, jlong address, jint value) {
-    uintptr_t addr = (uintptr_t)address;
-    if (addr == 0) return JNI_FALSE;
-    bool ok = KittyMemory::memWrite(addr, &value, sizeof(int));
-    return ok ? JNI_TRUE : JNI_FALSE;
+Java_memory_example_com_NativeBridge_nativeWrite(JNIEnv* env, jclass clazz, jlong address, jint value) {
+uintptr_t addr = (uintptr_t)address;
+if (addr == 0) return JNI_FALSE;
+bool ok = KittyMemory::memWrite(addr, &value, sizeof(int));
+return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jint JNICALL
-Java_memory_example_com_MainActivity_nativeBatchWrite(JNIEnv* env, jobject thiz, jstring values_str) {
-    if (g_last_scan_results.empty()) return 0;
-    const char* str = env->GetStringUTFChars(values_str, nullptr);
-    if (str == nullptr) return 0;
-    std::string input(str);
-    env->ReleaseStringUTFChars(values_str, str);
-    std::vector<int> values;
-    std::stringstream ss(input);
-    std::string token;
-    while (std::getline(ss, token, ',')) {
-        if (token.empty()) continue;
-        int v = (int)strtol(token.c_str(), nullptr, 10);
-        values.push_back(v);
-    }
-    int count = 0;
-    size_t limit = (values.size() < g_last_scan_results.size()) ? values.size() : g_last_scan_results.size();
-    for (size_t i = 0; i < limit; ++i) {
-        uintptr_t addr = g_last_scan_results[i];
-        if (addr != 0 && KittyMemory::memWrite(addr, &values[i], sizeof(int))) {
-            count++;
-        }
-    }
-    return count;
+Java_memory_example_com_NativeBridge_nativeBatchWrite(JNIEnv* env, jclass clazz, jstring values_str) {
+if (g_last_scan_results.empty()) return 0;
+const char* str = env->GetStringUTFChars(values_str, nullptr);
+if (str == nullptr) return 0;
+std::string input(str);
+env->ReleaseStringUTFChars(values_str, str);
+std::vector<int> values;
+std::stringstream ss(input);
+std::string token;
+while (std::getline(ss, token, ',')) {
+if (token.empty()) continue;
+int v = (int)strtol(token.c_str(), nullptr, 10);
+values.push_back(v);
+}
+int count = 0;
+size_t limit = (values.size() < g_last_scan_results.size()) ? values.size() : g_last_scan_results.size();
+for (size_t i = 0; i < limit; ++i) {
+uintptr_t addr = g_last_scan_results[i];
+if (addr != 0 && KittyMemory::memWrite(addr, &values[i], sizeof(int))) {
+count++;
+}
+}
+return count;
 }
 
 }
