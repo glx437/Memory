@@ -13,16 +13,50 @@
 
 static std::vector<uintptr_t> g_last_scan_results;
 
+static bool is_app_map(const KittyMemory::ProcMap& map) {
+    if (map.pathname.empty()) return false;
+    return map.pathname.find("/data/") != std::string::npos ||
+           map.pathname.find("/data/user/") != std::string::npos;
+}
+
+static bool is_system_map(const KittyMemory::ProcMap& map) {
+    if (map.pathname.empty()) return false;
+    return map.pathname.find("/system/") != std::string::npos ||
+           map.pathname.find("/apex/") != std::string::npos ||
+           map.pathname.find("/vendor/") != std::string::npos;
+}
+
+static bool is_anonymous_map(const KittyMemory::ProcMap& map) {
+    if (map.pathname.empty()) return true;
+    if (map.pathname[0] != '/') return true;
+    if (map.pathname.find("[anon:") != std::string::npos) return true;
+    if (map.pathname.find("[heap]") != std::string::npos) return true;
+    if (map.pathname.find("[stack]") != std::string::npos) return true;
+    return false;
+}
+
+static bool is_scope_allowed(const KittyMemory::ProcMap& map, jint scopeMask) {
+    if (scopeMask == 0) return true;
+    bool app = is_app_map(map);
+    bool sys = is_system_map(map);
+    bool anon = is_anonymous_map(map);
+    if ((scopeMask & 1) && app) return true;
+    if ((scopeMask & 2) && sys) return true;
+    if ((scopeMask & 4) && anon) return true;
+    return false;
+}
+
 extern "C" {
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_NativeBridge_nativeScanInt(JNIEnv* env, jclass clazz, jint target_value, jint permMask, jint limit) {
+Java_memory_example_com_NativeBridge_nativeScanInt(JNIEnv* env, jclass clazz, jint target_value, jint permMask, jint scopeMask, jint limit) {
 g_last_scan_results.clear();
 KittyScanner::setPatternScanSafeMode(true);
 auto maps = KittyMemory::getAllMaps();
 for (const auto& map : maps) {
 if (g_last_scan_results.size() >= (size_t)limit) break;
 if (!map.isValid() || !map.readable) continue;
+if (!is_scope_allowed(map, scopeMask)) continue;
 bool allowed = false;
 if ((permMask & 1) && map.writeable && !map.executable) allowed = true;
 if ((permMask & 2) && !map.writeable && !map.executable) allowed = true;
@@ -44,7 +78,7 @@ return ret;
 }
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_NativeBridge_nativeScanString(JNIEnv* env, jclass clazz, jstring target_value, jint permMask, jint limit) {
+Java_memory_example_com_NativeBridge_nativeScanString(JNIEnv* env, jclass clazz, jstring target_value, jint permMask, jint scopeMask, jint limit) {
 g_last_scan_results.clear();
 KittyScanner::setPatternScanSafeMode(true);
 const char* str = env->GetStringUTFChars(target_value, nullptr);
@@ -55,6 +89,7 @@ auto maps = KittyMemory::getAllMaps();
 for (const auto& map : maps) {
 if (g_last_scan_results.size() >= (size_t)limit) break;
 if (!map.isValid() || !map.readable) continue;
+if (!is_scope_allowed(map, scopeMask)) continue;
 bool allowed = false;
 if ((permMask & 1) && map.writeable && !map.executable) allowed = true;
 if ((permMask & 2) && !map.writeable && !map.executable) allowed = true;
