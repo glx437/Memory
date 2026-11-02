@@ -201,15 +201,9 @@ const char* name = env->GetStringUTFChars(moduleName, nullptr);
 if (name == nullptr) return 0;
 std::string modName(name);
 env->ReleaseStringUTFChars(moduleName, name);
-auto elfs = KittyScanner::ElfScanner::getAllELFs();
-for (const auto& elf : elfs) {
-if (!elf.isValid()) continue;
-std::string path = elf.filePath();
-size_t pos = path.find_last_of('/');
-std::string fileName = (pos != std::string::npos) ? path.substr(pos + 1) : path;
-if (fileName == modName) {
+auto elf = KittyScanner::ElfScanner::findElf(modName);
+if (elf.isValid()) {
 return (jlong)elf.base();
-}
 }
 return 0;
 }
@@ -218,35 +212,28 @@ JNIEXPORT jstring JNICALL
 Java_memory_example_com_NativeBridge_nativeGetModuleForAddress(JNIEnv* env, jclass clazz, jlong address) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return env->NewStringUTF("");
-auto elfs = KittyScanner::ElfScanner::getAllELFs();
-for (const auto& elf : elfs) {
-if (!elf.isValid()) continue;
-uintptr_t base = elf.base();
-uintptr_t end = elf.base() + elf.loadSize();
-if (addr >= base && addr < end) {
-std::string path = elf.filePath();
+auto map = KittyMemory::getAddressMap(addr);
+if (!map.isValid()) return env->NewStringUTF("");
+std::string path = map.pathname;
+if (path.empty() || path[0] != '/') return env->NewStringUTF("");
 size_t pos = path.find_last_of('/');
 std::string name = (pos != std::string::npos) ? path.substr(pos + 1) : path;
 return env->NewStringUTF(name.c_str());
-}
-}
-return env->NewStringUTF("");
 }
 
 JNIEXPORT jlong JNICALL
 Java_memory_example_com_NativeBridge_nativeGetOffset(JNIEnv* env, jclass clazz, jlong address) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return -1;
-auto elfs = KittyScanner::ElfScanner::getAllELFs();
-for (const auto& elf : elfs) {
-if (!elf.isValid()) continue;
-uintptr_t base = elf.base();
-uintptr_t end = elf.base() + elf.loadSize();
-if (addr >= base && addr < end) {
-return (jlong)(addr - base);
-}
-}
-return -1;
+auto map = KittyMemory::getAddressMap(addr);
+if (!map.isValid()) return -1;
+std::string path = map.pathname;
+if (path.empty() || path[0] != '/') return -1;
+size_t pos = path.find_last_of('/');
+std::string name = (pos != std::string::npos) ? path.substr(pos + 1) : path;
+auto elf = KittyScanner::ElfScanner::findElf(name);
+if (!elf.isValid()) return -1;
+return (jlong)(addr - elf.base());
 }
 
 JNIEXPORT jobjectArray JNICALL
