@@ -49,7 +49,7 @@ return false;
 extern "C" {
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_NativeBridge_nativeScanInt(JNIEnv* env, jclass clazz, jint target_value, jint permMask, jint scopeMask, jint limit) {
+Java_memory_example_com_Starter_nativeScanInt(JNIEnv* env, jclass clazz, jint target_value, jint permMask, jint scopeMask, jint limit) {
 g_last_scan_results.clear();
 KittyScanner::setPatternScanSafeMode(true);
 auto maps = KittyMemory::getAllMaps();
@@ -78,7 +78,7 @@ return ret;
 }
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_NativeBridge_nativeScanString(JNIEnv* env, jclass clazz, jstring target_value, jint permMask, jint scopeMask, jint limit) {
+Java_memory_example_com_Starter_nativeScanString(JNIEnv* env, jclass clazz, jstring target_value, jint permMask, jint scopeMask, jint limit) {
 g_last_scan_results.clear();
 KittyScanner::setPatternScanSafeMode(true);
 const char* str = env->GetStringUTFChars(target_value, nullptr);
@@ -111,7 +111,7 @@ return ret;
 }
 
 JNIEXPORT jlongArray JNICALL
-Java_memory_example_com_NativeBridge_nativeScanUtf16(JNIEnv* env, jclass clazz, jstring target_value, jint permMask, jint scopeMask, jint limit) {
+Java_memory_example_com_Starter_nativeScanUtf16(JNIEnv* env, jclass clazz, jstring target_value, jint permMask, jint scopeMask, jint limit) {
 g_last_scan_results.clear();
 KittyScanner::setPatternScanSafeMode(true);
 const char* str = env->GetStringUTFChars(target_value, nullptr);
@@ -149,7 +149,7 @@ return ret;
 }
 
 JNIEXPORT jint JNICALL
-Java_memory_example_com_NativeBridge_nativeReadInt(JNIEnv* env, jclass clazz, jlong address) {
+Java_memory_example_com_Starter_nativeReadInt(JNIEnv* env, jclass clazz, jlong address) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return -1;
 int value = 0;
@@ -158,7 +158,7 @@ return value;
 }
 
 JNIEXPORT jboolean JNICALL
-Java_memory_example_com_NativeBridge_nativeWriteInt(JNIEnv* env, jclass clazz, jlong address, jint value) {
+Java_memory_example_com_Starter_nativeWriteInt(JNIEnv* env, jclass clazz, jlong address, jint value) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return JNI_FALSE;
 bool ok = KittyMemory::memWrite(addr, &value, sizeof(int));
@@ -166,7 +166,7 @@ return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jstring JNICALL
-Java_memory_example_com_NativeBridge_nativeReadString(JNIEnv* env, jclass clazz, jlong address, jint length) {
+Java_memory_example_com_Starter_nativeReadString(JNIEnv* env, jclass clazz, jlong address, jint length) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0 || length <= 0) return env->NewStringUTF("");
 std::vector<char> buf(length + 1, 0);
@@ -176,7 +176,7 @@ return env->NewStringUTF(buf.data());
 }
 
 JNIEXPORT jboolean JNICALL
-Java_memory_example_com_NativeBridge_nativeWriteString(JNIEnv* env, jclass clazz, jlong address, jstring value) {
+Java_memory_example_com_Starter_nativeWriteString(JNIEnv* env, jclass clazz, jlong address, jstring value) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return JNI_FALSE;
 const char* str = env->GetStringUTFChars(value, nullptr);
@@ -187,7 +187,7 @@ return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jboolean JNICALL
-Java_memory_example_com_NativeBridge_nativeIsWritable(JNIEnv* env, jclass clazz, jlong address) {
+Java_memory_example_com_Starter_nativeIsWritable(JNIEnv* env, jclass clazz, jlong address) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return JNI_FALSE;
 auto map = KittyMemory::getAddressMap(addr);
@@ -196,7 +196,7 @@ return map.writeable ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jlong JNICALL
-Java_memory_example_com_NativeBridge_nativeGetModuleBase(JNIEnv* env, jclass clazz, jstring moduleName) {
+Java_memory_example_com_Starter_nativeGetModuleBase(JNIEnv* env, jclass clazz, jstring moduleName) {
 const char* name = env->GetStringUTFChars(moduleName, nullptr);
 if (name == nullptr) return 0;
 std::string modName(name);
@@ -209,7 +209,7 @@ return 0;
 }
 
 JNIEXPORT jstring JNICALL
-Java_memory_example_com_NativeBridge_nativeGetModuleForAddress(JNIEnv* env, jclass clazz, jlong address) {
+Java_memory_example_com_Starter_nativeGetModuleForAddress(JNIEnv* env, jclass clazz, jlong address) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return env->NewStringUTF("");
 auto map = KittyMemory::getAddressMap(addr);
@@ -222,7 +222,7 @@ return env->NewStringUTF(name.c_str());
 }
 
 JNIEXPORT jlong JNICALL
-Java_memory_example_com_NativeBridge_nativeGetOffset(JNIEnv* env, jclass clazz, jlong address) {
+Java_memory_example_com_Starter_nativeGetOffset(JNIEnv* env, jclass clazz, jlong address) {
 uintptr_t addr = (uintptr_t)address;
 if (addr == 0) return -1;
 auto map = KittyMemory::getAddressMap(addr);
@@ -237,7 +237,7 @@ return (jlong)(addr - elf.base());
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_memory_example_com_NativeBridge_nativeGetAllModules(JNIEnv* env, jclass clazz) {
+Java_memory_example_com_Starter_nativeGetAllModules(JNIEnv* env, jclass clazz) {
 auto maps = KittyMemory::getAllMaps();
 std::vector<std::string> modules;
 for (const auto& map : maps) {
